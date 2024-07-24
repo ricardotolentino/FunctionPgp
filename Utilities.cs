@@ -13,15 +13,38 @@ namespace FunctionPgp
         internal const string AppSettingPublicKeySecretName = "KeyVaultSecretNamePublicKey";
         internal const string AppSettingPrivateKeySecretName = "KeyVaultSecretNamePrivateKey";
         internal const string AppSettingPrivateKeyPasswordSecretName = "KeyVaultSecretNamePrivateKeyPassword";
-        internal const string AppSettingStorageAccountEncodeUri = "StorageAccountUriDecode__blobServiceUri";
+        internal const string AppSettingStorageAccountEncodeUriTrigger = "StorageAccountEncodeUriTrigger__blobServiceUri";
+        internal const string AppSettingStorageAccountEncodeUriDestination = "StorageAccountEncodeUriDestination";
+        internal const string AppSettingStorageAccountEncodeContainerDestination = "StorageAccountEncodeContainerDestination";
+        internal const string AppSettingStorageAccountDecodeUriTrigger = "StorageAccountDecodeUriTrigger__blobServiceUri";
+        internal const string AppSettingStorageAccountDecodeUriDestination = "StorageAccountDecodeUriDestination";
+        internal const string AppSettingStorageAccountDecodeContainerDestination = "StorageAccountDecodeContainerDestination";
 
-        internal static void PrintAppSettingsLogger(ILogger Logger)
+        internal static void PrintAppSettingsLogger(ILogger Logger, string? OperationType = null)
         {
-            var StorageAccountBlobDecode = Environment.GetEnvironmentVariable("StorageAccountUriDecode__blobServiceUri");
-            Logger.LogInformation($"Blob decode storage account = '{StorageAccountBlobDecode}'");
 
-            var StorageAccountBlobEncode = Environment.GetEnvironmentVariable("StorageAccountUriEncode__blobServiceUri");
-            Logger.LogInformation($"Blob decode storage account = '{StorageAccountBlobEncode}'");
+            if (OperationType == "encode")
+            {
+                var StorageAccountEncodeUriTrigger = Environment.GetEnvironmentVariable(AppSettingStorageAccountEncodeUriTrigger);
+                Logger.LogInformation($"Encode blob trigger storage account = '{StorageAccountEncodeUriTrigger}'");
+
+                var StorageAccountEncodeUriDestination = Environment.GetEnvironmentVariable(AppSettingStorageAccountEncodeUriDestination);
+                Logger.LogInformation($"Encode blob destination storage account = '{StorageAccountEncodeUriDestination}'");
+
+                var StorageAccountEncodeContainerDestination = Environment.GetEnvironmentVariable(AppSettingStorageAccountEncodeContainerDestination);
+                Logger.LogInformation($"Encode blob destination storage account container = '{StorageAccountEncodeContainerDestination}'");
+            }
+            else if (OperationType == "decode")
+            {
+                var StorageAccountDecodeUriTrigger = Environment.GetEnvironmentVariable(AppSettingStorageAccountDecodeUriTrigger);
+                Logger.LogInformation($"Decode blob trigger storage account = '{StorageAccountDecodeUriTrigger}'");
+
+                var StorageAccountDecodeUriDestination = Environment.GetEnvironmentVariable(AppSettingStorageAccountDecodeUriDestination);
+                Logger.LogInformation($"Decode blob destination storage account = '{StorageAccountDecodeUriDestination}'");
+
+                var StorageAccountDecodeContainerDestination = Environment.GetEnvironmentVariable(AppSettingStorageAccountDecodeContainerDestination);
+                Logger.LogInformation($"Decode blob destination storage account container = '{StorageAccountDecodeContainerDestination}'");
+            }
 
             var KeyVaultUri = Environment.GetEnvironmentVariable(AppSettingKeyVaultUri);
             Logger.LogInformation($"Key Vault URI = '{KeyVaultUri}'");
@@ -98,7 +121,7 @@ namespace FunctionPgp
             }
         }
 
-        internal static Stream GetBlobStream(ILogger Logger, string StorageAccountBlobUri)
+        internal static Stream GetBlobWriteStream(string StorageAccountBlobUri)
         {
             // Configure the Key Vault client
             var AzCred = new DefaultAzureCredential(new DefaultAzureCredentialOptions
