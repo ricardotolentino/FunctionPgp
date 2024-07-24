@@ -7,15 +7,19 @@ namespace FunctionPgp
     public static class FunctionPgp
     {
         [Function("FunctionEncode")]
-        [BlobOutput("gpg-destination/encrypted_{name}.gpg", Connection = "StorageAccountUriEncode")]
-        public static async Task<string> Encode(
-            [BlobTrigger("gpg-source/source_{name}.csv", Connection = "StorageAccountUriEncode")] string BlobTriggerContent,
+        public static async Task Encode(
+            [BlobTrigger("gpg-source/source_{name}.csv", Connection = "StorageAccountUriEncode")] Stream BlobTriggerContent,
+            string name,
             FunctionContext Context)
         {
             var Logger = Context.GetLogger("BlobFunction");
             Utilities.PrintAppSettingsLogger(Logger);
             var KeyVaultUri = Environment.GetEnvironmentVariable(Utilities.AppSettingKeyVaultUri) ?? "";
             var KeyVaultSecretNamePublicKey = Environment.GetEnvironmentVariable(Utilities.AppSettingPublicKeySecretName) ?? "";
+            var StorageAccountEncodeUri = Environment.GetEnvironmentVariable(Utilities.AppSettingStorageAccountEncodeUri) ?? "";
+
+            //var EncryptedBlobStream = Utilities.GetBlobStream(Logger, $"{StorageAccountEncodeUri}/gpg-destination/encrypted_{name}.gpg");
+            var EncryptedBlobStream = Utilities.GetBlobStream(Logger, $"{StorageAccountEncodeUri}/gpg-destination/encrypted_{name}.gpg");
 
             // Get and decode base64 public key secret
             var PublicKey = await Utilities.GetKeyVaultSecret(Logger, KeyVaultUri, KeyVaultSecretNamePublicKey, true);
@@ -31,11 +35,8 @@ namespace FunctionPgp
             Logger.LogInformation("Loaded public key ...");
 
             // Encrypt blob using public key
-            var EncryptedContent = await Pgp.EncryptAsync(BlobTriggerContent);
+            await Pgp.EncryptAsync(BlobTriggerContent, EncryptedBlobStream);
             Logger.LogInformation("Encrypted blob ...");
-
-            // Write to blob output
-            return $"{EncryptedContent}";
         }
 
         [Function("FunctionDecode")]

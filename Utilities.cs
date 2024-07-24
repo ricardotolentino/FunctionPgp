@@ -2,6 +2,7 @@
 using Azure;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+using Azure.Storage.Blobs;
 using Microsoft.Extensions.Logging;
 
 namespace FunctionPgp
@@ -12,11 +13,15 @@ namespace FunctionPgp
         internal const string AppSettingPublicKeySecretName = "KeyVaultSecretNamePublicKey";
         internal const string AppSettingPrivateKeySecretName = "KeyVaultSecretNamePrivateKey";
         internal const string AppSettingPrivateKeyPasswordSecretName = "KeyVaultSecretNamePrivateKeyPassword";
+        internal const string AppSettingStorageAccountEncodeUri = "StorageAccountUriDecode__blobServiceUri";
 
         internal static void PrintAppSettingsLogger(ILogger Logger)
         {
-            var Value = Environment.GetEnvironmentVariable("BlobConnectionMi__blobServiceUri");
-            Logger.LogInformation($"Blob storage account = '{Value}'");
+            var StorageAccountBlobDecode = Environment.GetEnvironmentVariable("StorageAccountUriDecode__blobServiceUri");
+            Logger.LogInformation($"Blob decode storage account = '{StorageAccountBlobDecode}'");
+
+            var StorageAccountBlobEncode = Environment.GetEnvironmentVariable("StorageAccountUriEncode__blobServiceUri");
+            Logger.LogInformation($"Blob decode storage account = '{StorageAccountBlobEncode}'");
 
             var KeyVaultUri = Environment.GetEnvironmentVariable(AppSettingKeyVaultUri);
             Logger.LogInformation($"Key Vault URI = '{KeyVaultUri}'");
@@ -91,6 +96,25 @@ namespace FunctionPgp
             {
                 return KeyVaultSecretValue;
             }
+        }
+
+        internal static Stream GetBlobStream(ILogger Logger, string StorageAccountBlobUri)
+        {
+            // Configure the Key Vault client
+            var AzCred = new DefaultAzureCredential(new DefaultAzureCredentialOptions
+            {
+                ExcludeEnvironmentCredential = true,
+                ExcludeWorkloadIdentityCredential = true,
+                ExcludeSharedTokenCacheCredential = true,
+                ExcludeVisualStudioCodeCredential = true,
+                ExcludeAzureCliCredential = true,
+                ExcludeAzurePowerShellCredential = true,
+                ExcludeAzureDeveloperCliCredential = true,
+                ExcludeInteractiveBrowserCredential = true,
+            });
+            var BlobClient = new BlobClient(new Uri(StorageAccountBlobUri), AzCred);
+
+            return BlobClient.OpenWrite(true);
         }
     }
 }
