@@ -121,7 +121,7 @@ namespace FunctionPgp
             }
         }
 
-        internal static Stream GetBlobWriteStream(string StorageAccountBlobUri)
+        internal static Task<Stream> GetBlobWriteStream(string StorageAccountBlobUri)
         {
             // Configure the Key Vault client
             var AzCred = new DefaultAzureCredential(new DefaultAzureCredentialOptions
@@ -137,7 +137,8 @@ namespace FunctionPgp
             });
             var BlobClient = new BlobClient(new Uri(StorageAccountBlobUri), AzCred);
 
-            return BlobClient.OpenWrite(true);
+            // Existing blobs will be overwritten since parameter is true
+            return BlobClient.OpenWriteAsync(true);
         }
     }
 }
