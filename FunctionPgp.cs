@@ -7,15 +7,19 @@ namespace FunctionPgp
     public static class FunctionPgp
     {
         [Function("FunctionEncode")]
-        [BlobOutput("gpg-destination/encrypted_{name}.gpg", Connection = "StorageAccountUriEncode")]
-        public static async Task<string> Encode(
-            [BlobTrigger("gpg-source/source_{name}.csv", Connection = "StorageAccountUriEncode")] string BlobTriggerContent,
+        public static async Task Encode(
+            [BlobTrigger("gpg-source/source_{TriggerBlobName}.csv", Connection = "StorageAccountEncodeUriTrigger")] Stream BlobTriggerContent,
+            string TriggerBlobName,
             FunctionContext Context)
         {
             var Logger = Context.GetLogger("BlobFunction");
-            Utilities.PrintAppSettingsLogger(Logger);
+
+            // Print and get App Settings
+            Utilities.PrintAppSettingsLogger(Logger, "encode");
             var KeyVaultUri = Environment.GetEnvironmentVariable(Utilities.AppSettingKeyVaultUri) ?? "";
             var KeyVaultSecretNamePublicKey = Environment.GetEnvironmentVariable(Utilities.AppSettingPublicKeySecretName) ?? "";
+            var StorageAccountUriEncodeDestination = Environment.GetEnvironmentVariable(Utilities.AppSettingStorageAccountEncodeUriDestination) ?? "";
+            var StorageAccountContainerEncodeDestination = Environment.GetEnvironmentVariable(Utilities.AppSettingStorageAccountEncodeContainerDestination) ?? "";
 
             // Get and decode base64 public key secret
             var PublicKey = await Utilities.GetKeyVaultSecret(Logger, KeyVaultUri, KeyVaultSecretNamePublicKey, true);
@@ -30,25 +34,34 @@ namespace FunctionPgp
             PGP Pgp = new PGP(EncryptionKeys);
             Logger.LogInformation("Loaded public key ...");
 
-            // Encrypt blob using public key
-            var EncryptedContent = await Pgp.EncryptAsync(BlobTriggerContent);
-            Logger.LogInformation("Encrypted blob ...");
+            // Get a stream to the destination blob to write the encrypted content
+            var DestinationBlobName = $"{StorageAccountUriEncodeDestination}/{StorageAccountContainerEncodeDestination}/encrypted_{TriggerBlobName}.gpg";
+            using (var EncryptedDestinationBlobStream = Utilities.GetBlobWriteStream(DestinationBlobName))
+            {
+                Logger.LogInformation($"Opened write stream to blob destination '{DestinationBlobName}' ...");
 
-            // Write to blob output
-            return $"{EncryptedContent}";
+                // Encrypt blob using public key
+                await Pgp.EncryptAsync(BlobTriggerContent, await EncryptedDestinationBlobStream);
+
+                Logger.LogInformation("Encrypted blob ...");
+            }
         }
 
         [Function("FunctionDecode")]
-        [BlobOutput("gpg-destination/decrypted_{name}.txt", Connection = "StorageAccountUriDecode")]
-        public static async Task<string> Decode(
-            [BlobTrigger("gpg-source/encrypted_{name}.gpg", Connection = "StorageAccountUriDecode")] string BlobTriggerContent,
+        public static async Task Decode(
+            [BlobTrigger("gpg-source/encrypted_{TriggerBlobName}.gpg", Connection = "StorageAccountDecodeUriTrigger")] Stream BlobTriggerContent,
+            string TriggerBlobName,
             FunctionContext Context)
         {
             var Logger = Context.GetLogger("BlobFunction");
-            Utilities.PrintAppSettingsLogger(Logger);
+
+            // Print and get App Settings
+            Utilities.PrintAppSettingsLogger(Logger, "decode");
             var KeyVaultUri = Environment.GetEnvironmentVariable(Utilities.AppSettingKeyVaultUri) ?? "";
             var KeyVaultSecretNamePrivateKey = Environment.GetEnvironmentVariable(Utilities.AppSettingPrivateKeySecretName) ?? "";
             var KeyVaultSecretNamePrivateKeyPassword = Environment.GetEnvironmentVariable(Utilities.AppSettingPrivateKeyPasswordSecretName) ?? "";
+            var StorageAccountUriDecodeDestination = Environment.GetEnvironmentVariable(Utilities.AppSettingStorageAccountDecodeUriDestination) ?? "";
+            var StorageAccountContainerDecodeDestination = Environment.GetEnvironmentVariable(Utilities.AppSettingStorageAccountDecodeContainerDestination) ?? "";
 
             // Get and decode base64 private key secret
             var PrivateKey = await Utilities.GetKeyVaultSecret(Logger, KeyVaultUri, KeyVaultSecretNamePrivateKey, true);
@@ -72,12 +85,17 @@ namespace FunctionPgp
             PGP Pgp = new PGP(EncryptionKeys);
             Logger.LogInformation("Loaded private key ...");
 
-            // Decrypt blob using private key
-            var DecryptedContent = await Pgp.DecryptAsync(BlobTriggerContent);
-            Logger.LogInformation("Decrypted blob ...");
+            // Get a stream to the destination blob for the decrypted content
+            var DestinationBlobName = $"{StorageAccountUriDecodeDestination}/{StorageAccountContainerDecodeDestination}/decrypted_{TriggerBlobName}.csv";
+            using (var DecryptedDestinationBlobStream = Utilities.GetBlobWriteStream(DestinationBlobName))
+            {
+                Logger.LogInformation($"Opened write stream to blob destination '{DestinationBlobName}' ...");
 
-            // Write to blob output
-            return $"{DecryptedContent}";
+                // Decrypt blob using private key
+                await Pgp.DecryptAsync(BlobTriggerContent, await DecryptedDestinationBlobStream);
+
+                Logger.LogInformation("Decrypted blob ...");
+            }
         }
     }
 }
