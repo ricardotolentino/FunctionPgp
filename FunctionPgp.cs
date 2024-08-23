@@ -36,12 +36,12 @@ namespace FunctionPgp
 
             // Get a stream to the destination blob to write the encrypted content
             var DestinationBlobName = $"{StorageAccountUriEncodeDestination}/{StorageAccountContainerEncodeDestination}/encrypted_{TriggerBlobName}.gpg";
-            using (var EncryptedDestinationBlobStream = Utilities.GetBlobWriteStream(DestinationBlobName))
+            using (var EncryptedDestinationBlobStream = await Utilities.GetBlobWriteStream(DestinationBlobName))
             {
                 Logger.LogInformation($"Opened write stream to blob destination '{DestinationBlobName}' ...");
 
                 // Encrypt blob using public key
-                await Pgp.EncryptAsync(BlobTriggerContent, await EncryptedDestinationBlobStream);
+                await Pgp.EncryptAsync(BlobTriggerContent, EncryptedDestinationBlobStream);
 
                 Logger.LogInformation("Encrypted blob ...");
             }
@@ -87,12 +87,12 @@ namespace FunctionPgp
 
             // Get a stream to the destination blob for the decrypted content
             var DestinationBlobName = $"{StorageAccountUriDecodeDestination}/{StorageAccountContainerDecodeDestination}/decrypted_{TriggerBlobName}.csv";
-            using (var DecryptedDestinationBlobStream = Utilities.GetBlobWriteStream(DestinationBlobName))
+            using (var DecryptedDestinationBlobStream = await Utilities.GetBlobWriteStream(DestinationBlobName))
             {
                 Logger.LogInformation($"Opened write stream to blob destination '{DestinationBlobName}' ...");
 
                 // Decrypt blob using private key
-                await Pgp.DecryptAsync(BlobTriggerContent, await DecryptedDestinationBlobStream);
+                await Pgp.DecryptAsync(BlobTriggerContent, DecryptedDestinationBlobStream);
 
                 Logger.LogInformation("Decrypted blob ...");
             }
