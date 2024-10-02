@@ -1,9 +1,9 @@
-﻿using System.Text;
-using Azure;
+﻿using Azure;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace FunctionPgp
 {
