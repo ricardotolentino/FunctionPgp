@@ -12,7 +12,7 @@ namespace FunctionPgp
             string TriggerBlobName,
             FunctionContext Context)
         {
-            var Logger = Context.GetLogger("BlobFunction");
+            var Logger = Context.GetLogger("FunctionEncode");
 
             // Print and get App Settings
             Utilities.PrintAppSettingsLogger(Logger, "encode");
@@ -53,7 +53,7 @@ namespace FunctionPgp
             string TriggerBlobName,
             FunctionContext Context)
         {
-            var Logger = Context.GetLogger("BlobFunction");
+            var Logger = Context.GetLogger("FunctionDecode");
 
             // Print and get App Settings
             Utilities.PrintAppSettingsLogger(Logger, "decode");
